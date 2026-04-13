@@ -139,7 +139,7 @@ print("[HW] IR Receiver (Custom Decoder) san sang.")
 
 
 # ══════════════════════════════════════════════════════════════
-#  ĐỌC CẢM BIẾN (Giữ nguyên)
+#  ĐỌC CẢM BIẾN
 # ══════════════════════════════════════════════════════════════
 
 
@@ -187,7 +187,7 @@ def read_tilt():
 
 
 # ══════════════════════════════════════════════════════════════
-#  HIỂN THỊ LCD & ĐÈN/SERVO (Giữ nguyên)
+#  HIỂN THỊ LCD & ĐÈN/SERVO
 # ══════════════════════════════════════════════════════════════
 
 
@@ -286,124 +286,124 @@ def miku_action_greet():
 
 
 # ══════════════════════════════════════════════════════════════
-#  BÁO CÁO THỜI TIẾT (Giữ nguyên)
+#  BÁO CÁO THỜI TIẾT
 # ══════════════════════════════════════════════════════════════
 
 
 def show_weather():
-    say("Chotto matte ne!\nIma hakaru yo~", duration=2)
+    say("Chotto matte!\nKeisokuchuu...", duration=2)
     t, h = read_dht11()
     if t is not None and h is not None:
-        say(f"Kyou no ondo wa\n{t:.1f} do desu!", duration=3)
-        say(f"Shitsudo wa ima\n{h:.0f} paasento~", duration=3)
+        say(f"Ima no kion\n{t:.1f} do C", duration=3)
+        say(f"Ima no shitsudo\n{h:.0f} paasento", duration=3)
         if t >= 35:
-            say("Atsui!! Miku mo\nnokki shiteru...", duration=3)
-            say("Soto wa kiken!\nHeya ni iyou~", duration=3)
-            say("Lien Quan shite\nasobou yo~", duration=3)
+            say("Atsui desu!!\nKi wo tsukete.", duration=3)
+            say("Heya de suzunde\nkudasai ne.", duration=3)
+            say("Geemu demo shite\nasobimashou!", duration=3)
         elif t >= 30:
-            say("Nanka atsui ne~\n(>_<) fuu...", duration=3)
-            say("Eakon tsukete!\nSuibun nonde ne", duration=3)
+            say("Mushiatsui ne.\nKi wo tsukete.", duration=3)
+            say("Eakon wo tsukete\nmizu nonde ne.", duration=3)
         elif t >= 25:
-            say("Ii kion desu ne\n(^_^) saikou~", duration=3)
-            say("Kyou mo ii hi ni\nnari sou desu!", duration=3)
+            say("Kion ga ii ne.\nKaiteki desu.", duration=3)
+            say("Kyou mo 1nichi\nganbatte ne!", duration=3)
         elif t >= 20:
-            say("Sukoshi suzushii\nkedo kimochi ii", duration=3)
-            say("Uwagi ippon\nmotte itte ne~", duration=3)
+            say("Sukoshi samui ga\nkimochi ii ne.", duration=3)
+            say("Uwagi wo motte\nitte kudasai ne.", duration=3)
         elif t >= 15:
-            say("Samui yo master\n(>_<) buruburu~", duration=3)
-            say("Jacket kite ne!\nKaze hiitara dame", duration=3)
+            say("Samui desu yo!\nKi wo tsukete.", duration=3)
+            say("Atsugi shite ne.\nKaze hikanaide.", duration=3)
         else:
-            say("Meccha samui!!\nMiku mo furueru", duration=3)
-            say("Chiba no kaze\nsamui kara ne!", duration=3)
+            say("Kion ga hikui!\nTotemo samui!", duration=3)
+            say("Chiba no kaze ga\ntsumetai desu!", duration=3)
             say("Atatakaku shite\ndekakete ne!", duration=3)
 
         if h >= 80:
-            say("Shitsudo takai~\njimejime iya da~", duration=3)
-            say("Heya no eakon de\njoshitsu shite ne", duration=3)
+            say("Shitsudo takai!\nJimejime shiteru", duration=3)
+            say("Joshitsu moodo\nni shite ne.", duration=3)
         elif h >= 60:
-            say("Shitsudo futsuu\nne (^_^) yokatta", duration=3)
+            say("Shitsudo seijou.\nKuuki ga ii ne.", duration=3)
         elif h < 40:
-            say("Karakara da yo!\n(x_x) nodo itai", duration=3)
-            say("Mizu nonde! Nodo\nkawaite nakutemo", duration=3)
+            say("Kansou shiteru.\nKi wo tsukete.", duration=3)
+            say("Mizu wo takusan\nnonde kudasai!", duration=3)
     else:
-        say("Ondo to shitsudo\nhakarenakatta...", duration=3)
+        say("Sensa eraa:\nKion, Shitsudo", duration=3)
 
-    say("Tsugi wa atsu-\nryoku hakaru ne!", duration=2)
+    say("Tsugi wa kiatsu\nwo hakarimasu!", duration=2)
     press = read_bmp180()
     if press is not None:
-        say(f"Atsuryoku wa\n{press:.1f} hPa desu", duration=3)
+        say(f"Kiatsu wa\n{press:.1f} hPa", duration=3)
         if press < 990:
-            say("Atsuryoku hikui!\nAme ga furu kamo", duration=3)
-            say("Inage eki made\nkasa motte itte!", duration=3)
+            say("Teikiatsu desu!\nAme furu kamo.", duration=3)
+            say("Inage Eki ni wa\nkasa motte ne!", duration=3)
         elif press < 1000:
-            say("Sukoshi hikui ne\n(~_~) kumori?", duration=3)
-            say("Ame furanai to\nii desu ne~", duration=3)
+            say("Kiatsu hikume.\nKumori kamo.", duration=3)
+            say("Ame furanai to\nii desu ne.", duration=3)
         elif press <= 1015:
-            say("Atsuryoku futsuu\n(^_^) yokatta~", duration=3)
-            say("Kyou no tenki wa\nmaa maa desu ne", duration=3)
+            say("Kiatsu seijou.\nKaiteki desu ne.", duration=3)
+            say("Kyou no tenki wa\nsubarashii desu.", duration=3)
         elif press <= 1025:
-            say("Ii atsuryoku!\nhare sou desu~", duration=3)
-            say("Soto de sanpo\nshitara dou?", duration=3)
+            say("Koukiatsu desu!\nHaremasu yo.", duration=3)
+            say("Sanpo ni iku no\nmo ii desu ne.", duration=3)
         else:
-            say("Atsuryoku takai!\nhare hare~(^o^)", duration=3)
-            say("Zettai soto de\nasobou yo~!", duration=3)
+            say("Kiatsu totemo\ntakai desu!", duration=3)
+            say("Soto de asobu\nno ni saiteki!", duration=3)
     else:
-        say("Atsuryoku sensa\nhakarenakatta..", duration=3)
+        say("Sensa eraa:\nKiatsu...", duration=3)
 
-    say("Akarusa mo check\nsuru ne!", duration=2)
+    say("Akarusa wo\nchekku chuu!", duration=2)
     light_val = read_light()
     if light_val is not None:
         percent = light_val * 100
-        say(f"Akarusa wa ima\n{percent:.0f} paasento!", duration=3)
+        say(f"Akarusa wa ima\n{percent:.0f} paasento", duration=3)
         if percent >= 50:
-            say("Akarui ne~!\nMabushii kurai!", duration=3)
-            say("Shigoto mo benkyou\nmo ganbatte!", duration=3)
+            say("Akarukute ii ne!\nSaikou desu.", duration=3)
+            say("Shigoto ganbatte\nkudasai ne!", duration=3)
         else:
-            say("Kurai yo master!\n(>_<) kowai...", duration=3)
-            say("Denki tsukete!\nMe ga waruku naru", duration=3)
+            say("Sukoshi kurai!\nMe ni warui yo.", duration=3)
+            say("Denki wo tsukete\nshigoto shite ne", duration=3)
     else:
-        say("Akarusa sensa\nwakaranai yo...", duration=3)
+        say("Sensa eraa:\nAkarusa...", duration=3)
 
-    say("Saigo ni katamuki\ncheck suru ne!", duration=2)
+    say("Katamuki sensa\nchekku chuu...", duration=2)
     tilt_val = read_tilt()
     if tilt_val is not None:
         if tilt_val == 1:
-            say("Aaaaa!!!\nMiku ochiteru!!!", duration=3)
-            say("Tasukete master!\n(>_<)", duration=3)
+            say("Keikoku!!!\nTaorete imasu!", duration=3)
+            say("Oki basho wo\nchekku shite!", duration=3)
         else:
-            say("Katamuki nashi!\nAnzen desu~ (^_^)", duration=3)
+            say("Anzen desu.\nKatamuki nashi.", duration=3)
     else:
-        say("Gomen nasai ne~\n(T_T) sumimasen", duration=3)
-        say("Katamuki sensa\nwakaranai yo...", duration=3)
+        say("Gomen, katamuki\nsensa eraa desu.", duration=3)
+        say("Setsuzoku wo\nchekku shite.", duration=3)
 
-    say("Jouhou houkoku\nowari desu~(^_^)", duration=3)
+    say("Houkoku subete\nkanryou shita!", duration=3)
 
 
 IDLE_PHRASES = [
-    "Master~! Miku no\nkoto wasureta?",
-    "Sabishii yo~!\nKoko ni iru noni",
-    "Miku wa zutto\nmatteru no ni~",
-    "Master no koto\nzutto kangaete",
-    "Nee nee master!\nKiite kiite~(^o^)",
-    "Onaka suita yo\n(>_<) peko peko~",
-    "Nemui desu...\n(-_-) zzz...demo",
-    "Okashi tabetai!\nMaster okotte?",
-    "Issho ni asobou!\nMiku to ne~ (^_^)",
-    "Nani shiteru no?\nMiku to hanasou!",
-    "Hima da yo master\nkamaatte~ (;_;)",
-    "Master kakkoii!\nMiku suki desu~",
-    "Master tensai!\nMiku mo gambaru",
-    "Miku ne master\nno fan desu yo!",
-    "Miku no uta wo\nkiite kudasai~",
-    "Kyou mo kawaii\nMiku desu yo~!",
-    "Fushigi da naa~\n(*_*) sekai tte",
-    "Miku happy!\n(^o^)/ yatta~!",
-    "Hora hora hora!\nMiku wo mite te!",
-    "Atama nadenade\nshite hoshii na~",
-    "Yoshi yoshi shite\nMiku ni ne~ (///)",
-    "Master no koto\nchotto baka kana",
-    "Eeto... master\nwasureteru? (^^;)",
-    "Mou! Kamatte yo\n(>O<) prease!!",
+    "Konnichiwa,\nGokku desu!",
+    "Yoi ichinichi wo\nsugoshite ne!",
+    "Suibun hokyuu wo\nwasurenaide ne.",
+    "1 jikan goto ni\nkyuukei shite!",
+    "Oshigoto no\nchoushi wa dou?",
+    "Geemu shite\nikinuki shiyou!",
+    "Nanika tetsudai\nmashou ka?",
+    "Zutto suwarazu\nundou shite ne.",
+    "Subete junchou\nni ugoite iru!",
+    "Deeta no hozon\nwasurenaide ne!",
+    "Kyou wa totemo\nii hi desu ne.",
+    "Gokku wa itsumo\nkokoni iru yo!",
+    "Ohiruyasumi no\njikan desu ka?",
+    "Muri shinaide\nganbatte ne!",
+    "Gogo wa kafe ni\nikimashou ka?",
+    "Yoku ganbatte\nimasu ne. Sugoi!",
+    "Egao wo wasure\nnaide kudasai!",
+    "Ii tenki dakara\nsanpo ni ikou!",
+    "Shokuji wa jikan\ndoori ni ne.",
+    "Itsumo ganbatte\nkurete arigatou!",
+    "Mokuhyou wa\ntassei shita?",
+    "Gokku wa anata\nwo ouen shiteru!",
+    "Sutoresu wo\ntamenaide ne!",
+    "Shigoto no meeru\nchekku shite ne!",
 ]
 
 
@@ -411,7 +411,7 @@ IDLE_PHRASES = [
 #  HÀM TƯƠNG TÁC (ĐÃ SỬA LẠI ĐỂ ĐỌC QUEUE)
 # ══════════════════════════════════════════════════════════════
 def ask_master_menu():
-    menu_text = "Master nani wo\nshimasu ka?\n1.Tenkijouhou\n2.Hanasu\n3.Te o furu"
+    menu_text = "Konnichiwa! Nani\nwo shimasu ka?\n1.Tenki\n2.Oshaberi\n3.Aisatsu"
     pages = _build_pages(menu_text)
 
     start_time = time.time()
@@ -453,7 +453,7 @@ def ask_master_menu():
 
 def main():
     print("=" * 50)
-    print("  Miku System Interactive Online!")
+    print("  Gokku System Interactive Online!")
     print("  Bam 1, 2, 3 tren Remote hoac Ban Phim.")
     print("=" * 50)
     lcd.clear()
@@ -466,10 +466,10 @@ def main():
             is_sleeping = False
 
             miku_action_greet()
-            say("Okaeri master!\nMiku desu~(^^)/", duration=4)
+            say("Konnichiwa!\nGokku desu yo!", duration=4)
 
             while not is_sleeping:
-                print("\n[SYS] Miku dang cho lenh...")
+                print("\n[SYS] Gokku dang cho lenh...")
                 key_code = ask_master_menu()  # Trả về chuỗi '1', '2', hoặc '3'
 
                 if key_code == "1":
@@ -477,20 +477,20 @@ def main():
                     show_weather()
 
                 elif key_code == "2":
-                    print("[CMD] Chon chuc nang 2: Hanasu")
+                    print("[CMD] Chon chuc nang 2: Tro chuyen")
                     phrase = random.choice(IDLE_PHRASES)
                     say(phrase, duration=3)
 
                 elif key_code == "3":
                     print("[CMD] Chon chuc nang 3: Quay Servo")
-                    say("Hai~! Te o\nfuru ne~ (^_^)", duration=2)
+                    say("Ryoukai! Ima\nte wo furu ne.", duration=2)
                     action_wave(times=2)
 
                 elif key_code is None:
-                    print("[LOG] Khong nhan duoc tin hieu. Miku ngu.")
-                    say("Mou inai no...?\nSabishii naa~", duration=3)
-                    say("Nemuku natte\nkita yo... (-_-)", duration=3)
-                    say("Oyasumi~! zZZ\nMatte masu yo~", duration=3)
+                    print("[LOG] Khong nhan duoc tin hieu. He thong nghi.")
+                    say("Daremo inai.\nSuriipu shimasu.", duration=3)
+                    say("Ichiji teishi.\nSayounara!", duration=3)
+                    say("Mata ne!\nYonde kudasai.", duration=3)
 
                     is_sleeping = True
                     led.off()
@@ -504,7 +504,7 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("\n[SYS] Tat he thong...")
-        say("Mata ne master!\nMiku matte masu", duration=2)
+        say("Sayounara!\nMata aou ne.", duration=2)
         led.off()
         servo.value = None
         lcd.clear()
