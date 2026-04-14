@@ -5,6 +5,10 @@ import busio
 AWAKE_TIME = 120.0
 PAGE_FLIP_SEC = 2.0
 
+# --- GEMINI AI ---
+GEMINI_API_KEY = "YOUR_API_KEY_HERE"
+
+
 # --- CẤU HÌNH CHÂN GPIO ---
 I2C_ADDR = 0x27
 DHT_PIN = board.D4

@@ -3,18 +3,26 @@ import random
 import display
 import actuators
 import sensors
+import shared_state
+import config
+
+try:
+    import google.generativeai as genai
+    HAS_GENAI = True
+except ImportError:
+    HAS_GENAI = False
+
+if HAS_GENAI and hasattr(config, 'GEMINI_API_KEY') and config.GEMINI_API_KEY and config.GEMINI_API_KEY != "YOUR_API_KEY_HERE":
+    genai.configure(api_key=config.GEMINI_API_KEY)
+    gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+else:
+    gemini_model = None
 
 IDLE_PHRASES = [
     "Konnichiwa,\nGokku desu!",
     "Yoi ichinichi wo\nsugoshite ne!",
     "Suibun hokyuu wo\nwasurenaide ne.",
     "1 jikan goto ni\nkyuukei shite!",
-    "Oshigoto no\nchoushi wa dou?",
-    "Geemu shite\nikinuki shiyou!",
-    "Nanika tetsudai\nmashou ka?",
-    "Zutto suwarazu\nundou shite ne.",
-    "Subete junchou\nni ugoite iru!",
-    "Deeta no hozon\nwasurenaide ne!",
 ]
 
 
@@ -28,52 +36,72 @@ def miku_action_greet():
     threading.Thread(target=actuators.action_wave, args=(3,), daemon=True).start()
 
 
+def ask_gemini(prompt):
+    """ Hàm cốt lõi để gọi Gemini API và cân đối thời gian hiển thị LCD """
+    if not gemini_model:
+        say("API Key erro!\nGemini muko.", duration=3)
+        return
+    
+    # Bật nháy đèn ngắn và báo trên màn hình đang suy nghĩ
+    threading.Thread(target=actuators.blink_short, args=(2,), daemon=True).start()
+    display.write_direct("Kangaechuu...", "Matte ne~")
+    
+    try:
+        response = gemini_model.generate_content(prompt)
+        text = response.text.replace("\n", " ").strip() 
+        
+        # Tính thời gian chạy chữ tương đối cho người dùng đọc (Khoảng 3.5 giây cho mỗi 32 ký tự)
+        total_chars = len(text)
+        estimated_duration = max(4.0, (total_chars / 32.0) * 3.5)
+        say(text, duration=estimated_duration)
+    except Exception as e:
+        print(f"[AI] Loi Gemini: {e}")
+        say("Gomen! AI eraa\ndesu.", duration=3)
+
+
 def show_weather():
-    say("Chotto matte!\nKeisokuchuu...", duration=2)
+    """ Đọc cảm biến thực tế, lấy prompt đưa cho AI làm thông báo thời tiết """
+    if not gemini_model:
+        say("API Key erro!\nGemini muko.", duration=3)
+        return
 
-    # Kion & Shitsudo
-    t, h = sensors.read_dht11()
-    if t is not None and h is not None:
-        say(f"Ima no kion\n{t:.1f} do C", duration=3)
-        say(f"Ima no shitsudo\n{h:.0f} paasento", duration=3)
-        if t >= 30:
-            say("Atsui desu!!\nKi wo tsukete.", duration=3)
-        elif t >= 20:
-            say("Kion ga ii ne.\nKaiteki desu.", duration=3)
-        else:
-            say("Samui desu yo!\nKi wo tsukete.", duration=3)
-    else:
-        say("Sensa eraa:\nKion, Shitsudo", duration=3)
+    # Lấy dữ liệu từ background loop thay vì block đo lại 
+    t = shared_state.sensor_data.get("temp", "Khong ro")
+    h = shared_state.sensor_data.get("hum", "Khong ro")
+    p = shared_state.sensor_data.get("press", "Khong ro")
+    l = shared_state.sensor_data.get("light", "Khong ro")
+    tilt = shared_state.sensor_data.get("tilt", "Khong roi")
+    
+    prompt = f"""
+    You are Gokku, a polite, friendly, and hardworking office worker acting as a smart assistant.
+    You are interacting with your colleagues.
+    Current sensor readings:
+    - Temperature: {t}
+    - Humidity: {h}
+    - Pressure: {p}
+    - Environment light: {l}
+    - Tilt sensor (an toan/bi do): {tilt}
 
-    # Kiatsu
-    say("Tsugi wa kiatsu\nwo hakarimasu!", duration=2)
-    press = sensors.read_bmp180()
-    if press is not None:
-        say(f"Kiatsu wa\n{press:.1f} hPa", duration=3)
-        if press < 1000:
-            say("Teikiatsu desu!\nAme furu kamo.", duration=3)
-        else:
-            say("Kiatsu seijou.\nKaiteki desu ne.", duration=3)
-    else:
-        say("Sensa eraa:\nKiatsu...", duration=3)
+    Rules:
+    1. Reply ONLY in Romanized Japanese (Romaji plain text). NO emojis, NO kanji, NO hiragana.
+    2. Write max 3-4 short sentences (around 100-150 chars total), suitable for displaying on a scrolling LCD.
+    3. Analyze the sensors to report weather/environment gently, warning them playfully if it's too hot, dark, or if the device is tilted.
+    """
+    ask_gemini(prompt)
 
-    # Akarusa
-    say("Akarusa wo\nchekku chuu!", duration=2)
-    light_val = sensors.read_light()
-    if light_val is not None:
-        say(f"Akarusa wa ima\n{light_val*100:.0f} paasento", duration=3)
-    else:
-        say("Sensa eraa:\nAkarusa...", duration=3)
 
-    # Katamuki
-    say("Katamuki sensa\nchekku chuu...", duration=2)
-    tilt_val = sensors.read_tilt()
-    if tilt_val is not None:
-        if tilt_val == 1:
-            say("Keikoku!!!\nTaorete imasu!", duration=3)
-        else:
-            say("Anzen desu.\nKatamuki nashi.", duration=3)
-    else:
-        say("Gomen, katamuki\nsensa eraa desu.", duration=3)
+def ai_oshaberi():
+    """ Tám chuyện ngẫu nhiên cùng đồng nghiệp thay cho chức năng cũ """
+    if not gemini_model:
+        say(random.choice(IDLE_PHRASES), duration=3)
+        return
 
-    say("Houkoku subete\nkanryou shita!", duration=3)
+    prompt = """
+    You are Gokku, a friendly, polite, and caring human office worker.
+    Say a random, creative greeting, a short encouraging message, or a gentle reminder (e.g. stretch arms, drink water) to your human colleague/boss.
+    
+    Rules:
+    1. Reply ONLY in Romanized Japanese (Romaji plain text). NO emojis, NO kanji, NO hiragana.
+    2. Write max 2-3 short sentences (around 80-120 chars total) so it fits on an LCD.
+    """
+    ask_gemini(prompt)

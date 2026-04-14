@@ -26,7 +26,7 @@ def _run_gokku_action(key_code: str):
     elif key_code == "2":
         shared_state.mark_busy(shared_state.led_busy, shared_state.lcd_busy)
         try:
-            gokku.say(random.choice(gokku.IDLE_PHRASES), duration=3)
+            gokku.ai_oshaberi()
         finally:
             shared_state.mark_free(shared_state.led_busy, shared_state.lcd_busy)
 
