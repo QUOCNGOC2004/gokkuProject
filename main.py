@@ -33,14 +33,26 @@ sensor_data = {
     "lcd_line2": "He thong...",
 }
 
-# Cờ báo Gokku đang thực thi (tránh gọi chồng chéo từ remote)
-gokku_busy = False
-_gokku_lock = threading.Lock()
+# ============================================================
+# TRẠNG THÁI BẬN CỦA TỪNG MODULE ACTUATOR
+# Dùng threading.Event: .set() = đang bận, .clear() = rảnh
+# Web chỉ bị từ chối khi đúng module đó đang được remote dùng.
+# ============================================================
+_led_busy   = threading.Event()   # LED RGB đang bận
+_servo_busy = threading.Event()   # Servo đang bận
+_lcd_busy   = threading.Event()   # LCD đang bận
 
-# Cờ báo remote đang thức (đang trong menu chờ lệnh hoặc đang thực thi lệnh từ remote)
-# Khi True, web KHÔNG được điều khiển LED/Servo/LCD
-remote_active = False
-_remote_lock = threading.Lock()
+
+def _mark_busy(*modules):
+    """Đánh dấu các module là đang bận (gọi trước khi remote thực thi)."""
+    for m in modules:
+        m.set()
+
+
+def _mark_free(*modules):
+    """Đánh dấu các module là rảnh (gọi sau khi remote hoàn tất)."""
+    for m in modules:
+        m.clear()
 
 # ============================================================
 # GIAO DIỆN WEB (HTML/CSS/JS — giữ nguyên từ app.py gốc)
@@ -248,11 +260,9 @@ def api_status():
 
 @app.route('/api/servo')
 def api_servo():
-    with _remote_lock:
-        if remote_active:
-            return jsonify({"status": "busy", "message": "Remote dang hoat dong"})
+    if _servo_busy.is_set():
+        return jsonify({"status": "busy", "message": "Servo dang duoc remote su dung"})
     goc_dich = request.args.get('goc', default=0, type=int)
-    # Chạy trong thread riêng để Flask không bị blocking
     threading.Thread(
         target=actuators.servo_to_angle,
         args=(goc_dich,),
@@ -264,9 +274,8 @@ def api_servo():
 
 @app.route('/api/led')
 def api_led():
-    with _remote_lock:
-        if remote_active:
-            return jsonify({"status": "busy", "message": "Remote dang hoat dong"})
+    if _led_busy.is_set():
+        return jsonify({"status": "busy", "message": "LED dang duoc remote su dung"})
     r = request.args.get('r', 0, type=int)
     g = request.args.get('g', 0, type=int)
     b = request.args.get('b', 0, type=int)
@@ -276,9 +285,8 @@ def api_led():
 
 @app.route('/api/blink')
 def api_blink():
-    with _remote_lock:
-        if remote_active:
-            return jsonify({"status": "busy", "message": "Remote dang hoat dong"})
+    if _led_busy.is_set():
+        return jsonify({"status": "busy", "message": "LED dang duoc remote su dung"})
     state = (request.args.get('state', 'false').lower() == 'true')
     speed = request.args.get('speed', default=0.5, type=float)
     actuators.set_blink(state, speed)
@@ -287,9 +295,8 @@ def api_blink():
 
 @app.route('/api/lcd')
 def api_lcd():
-    with _remote_lock:
-        if remote_active:
-            return jsonify({"status": "busy", "message": "Remote dang hoat dong"})
+    if _lcd_busy.is_set():
+        return jsonify({"status": "busy", "message": "LCD dang duoc remote su dung"})
     text = request.args.get('text', '')
     if len(text) > 16:
         display.update_lcd(text[:16], text[16:32])
@@ -301,17 +308,39 @@ def api_lcd():
 
 
 # ============================================================
-# HÀM THỰC THI LỆNH GOKKU (dùng chung cho remote + web)
+# HÀM THỰC THI LỆNH GOKKU (chỉ remote gọi)
+# Mỗi key đánh dấu đúng module bận TRƯỚC rồi thực thi,
+# đảm bảo web không chen vào trong lúc đang chạy.
 # ============================================================
 def _run_gokku_action(key_code: str):
-    """Thực thi hành động Gokku theo mã phím 1/2/3."""
+    """
+    Thực thi hành động Gokku theo mã phím 1/2/3.
+    Mapping module bận:
+      key 1 (thời tiết) : LED + LCD  (nhiều lần say())
+      key 2 (tám)       : LED + LCD  (một lần say())
+      key 3 (vẫy tay)   : LED + LCD + Servo  (say() + action_wave())
+    """
     if key_code == "1":
-        gokku.show_weather()
+        _mark_busy(_led_busy, _lcd_busy)
+        try:
+            gokku.show_weather()
+        finally:
+            _mark_free(_led_busy, _lcd_busy)
+
     elif key_code == "2":
-        gokku.say(random.choice(gokku.IDLE_PHRASES), duration=3)
+        _mark_busy(_led_busy, _lcd_busy)
+        try:
+            gokku.say(random.choice(gokku.IDLE_PHRASES), duration=3)
+        finally:
+            _mark_free(_led_busy, _lcd_busy)
+
     elif key_code == "3":
-        gokku.say("Ryoukai! Ima\nte wo furu ne.", duration=2)
-        actuators.action_wave(times=2)
+        _mark_busy(_led_busy, _lcd_busy, _servo_busy)
+        try:
+            gokku.say("Ryoukai! Ima\nte wo furu ne.", duration=2)
+            actuators.action_wave(times=2)
+        finally:
+            _mark_free(_led_busy, _lcd_busy, _servo_busy)
 
 
 # ============================================================
@@ -399,10 +428,12 @@ def ir_keyboard_loop():
     """
     Luồng ngầm xử lý remote + bàn phím.
     Chạy song song với Flask server.
-    remote_active = True khi Gokku đang thức (từ lúc PIR phát hiện đến khi ngủ lại),
-    trong suốt thời gian đó web KHÔNG được điều khiển LED/Servo/LCD.
+
+    Quy tắc ưu tiên:
+    - Remote luôn ưu tiên: set flag bận TRƯỚC khi thực thi.
+    - Web chỉ bị từ chối khi đúng module đó đang bận bởi remote.
+    - Khi remote hoàn tất, flag tự clear → web điều khiển được ngay.
     """
-    global gokku_busy, remote_active
     print("[SYS] Gokku dang cho lenh (remote + ban phim)...")
     ir_receiver.start_ir_thread()
     is_sleeping = True
@@ -411,35 +442,38 @@ def ir_keyboard_loop():
         if sensors.pir.motion_detected and is_sleeping:
             print("\n[PIR] Phat hien nguoi!")
             is_sleeping = False
-            # Đánh dấu remote đang hoạt động — web sẽ bị từ chối cho các module actuator
-            with _remote_lock:
-                remote_active = True
-            gokku.miku_action_greet()
-            gokku.say("Konnichiwa!\nGokku desu yo!", duration=4)
+
+            # Chào hỏi: flash_long (LED, ~5s) + action_wave (Servo, ~2.7s) + say (LED+LCD, 4s)
+            # → ba module đều bận trong pha chào
+            _mark_busy(_led_busy, _servo_busy, _lcd_busy)
+            try:
+                gokku.miku_action_greet()
+                gokku.say("Konnichiwa!\nGokku desu yo!", duration=4)
+            finally:
+                _mark_free(_led_busy, _servo_busy, _lcd_busy)
 
             while not is_sleeping:
                 print("\n[SYS] Gokku dang cho lenh...")
+                # Hiển thị menu → chỉ LCD bận
+                _mark_busy(_lcd_busy)
                 key_code = ask_master_menu()
+                _mark_free(_lcd_busy)
 
                 if key_code in ["1", "2", "3"]:
-                    # Remote ưu tiên: thực thi ngay dù web có đang gửi lệnh
-                    with _gokku_lock:
-                        gokku_busy = True
-                    try:
-                        _run_gokku_action(key_code)
-                    finally:
-                        with _gokku_lock:
-                            gokku_busy = False
+                    # Remote ưu tiên: _run_gokku_action tự quản lý flag bận/rảnh
+                    _run_gokku_action(key_code)
 
                 elif key_code is None:
                     print("[LOG] Khong nhan duoc tin hieu. He thong nghi.")
-                    gokku.say("Daremo inai.\nSuriipu shimasu.", duration=3)
+                    # say goodbye → LED + LCD bận
+                    _mark_busy(_led_busy, _lcd_busy)
+                    try:
+                        gokku.say("Daremo inai.\nSuriipu shimasu.", duration=3)
+                    finally:
+                        _mark_free(_led_busy, _lcd_busy)
                     is_sleeping = True
                     actuators.turn_off()
                     display.lcd.clear()
-                    # Khi ngủ lại → web được phép điều khiển trở lại
-                    with _remote_lock:
-                        remote_active = False
 
         time.sleep(0.1)
 
