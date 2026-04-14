@@ -37,6 +37,11 @@ sensor_data = {
 gokku_busy = False
 _gokku_lock = threading.Lock()
 
+# Cờ báo remote đang thức (đang trong menu chờ lệnh hoặc đang thực thi lệnh từ remote)
+# Khi True, web KHÔNG được điều khiển LED/Servo/LCD
+remote_active = False
+_remote_lock = threading.Lock()
+
 # ============================================================
 # GIAO DIỆN WEB (HTML/CSS/JS — giữ nguyên từ app.py gốc)
 # ============================================================
@@ -74,17 +79,14 @@ HTML_PAGE = """
         #mau_preview { height: 40px; background-color: rgb(0,0,0); border-radius: 8px; margin-bottom: 15px; border: 2px solid #555;}
         .blink-panel { margin-top: 15px; background: #333; padding: 15px; border-radius: 8px;}
 
-        /* Panel Gokku */
-        .gokku-panel { display: flex; gap: 10px; margin-top: 10px; }
-        .gokku-panel button { flex: 1; }
-        .btn-gokku1 { background: #e84118 !important; }
-        .btn-gokku1:hover { background: #b33010 !important; }
-        .btn-gokku2 { background: #fbc531 !important; color: #000 !important; }
-        .btn-gokku2:hover { background: #c9a227 !important; }
-        .btn-gokku3 { background: #4cd137 !important; color: #000 !important; }
-        .btn-gokku3:hover { background: #3aab28 !important; }
-        #gokku_status { margin-top: 10px; color: #aaa; font-size: 13px; min-height: 18px; text-align: center; }
-    </style>
+        /* Thông báo bận (remote đang hoạt động) */
+        .busy-toast { display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #e84118; color: #fff; font-weight: bold; padding: 12px 28px;
+            border-radius: 10px; font-size: 15px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); z-index: 9999;
+            animation: fadeInUp 0.3s ease; }
+        @keyframes fadeInUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+        .status-label { font-size: 12px; color: #f39c12; min-height: 16px; margin-top: 6px; text-align: center; }
+        </style>
 </head>
 <body>
     <h1>🚀 Gokku Smart Hub</h1>
@@ -135,6 +137,7 @@ HTML_PAGE = """
                 <div class="slider-label"><span>Tốc độ:</span><span id="speed_val">0.5s</span></div>
                 <input type="range" id="blink_speed" min="0.05" max="2.0" step="0.05" value="0.5" oninput="capNhatBlink()">
             </div>
+            <div class="status-label" id="led_status"></div>
         </div>
 
         <div class="box">
@@ -145,29 +148,34 @@ HTML_PAGE = """
             <div id="trang_thai_servo" style="color: #4cd137; text-align: center; margin-top: 10px; height: 20px;"></div>
         </div>
 
-        <div class="box">
-            <h2>🐉 Điều khiển Gokku</h2>
-            <p style="color: #888; font-size: 13px; margin-top: 0;">
-                Giống bấm remote: chọn chế độ Gokku thực thi trên thiết bị.
-            </p>
-            <div class="gokku-panel">
-                <button class="btn-gokku1" onclick="gokkuAction(1)">🌤️ Thời tiết</button>
-                <button class="btn-gokku2" onclick="gokkuAction(2)">💬 Tám chuyện</button>
-                <button class="btn-gokku3" onclick="gokkuAction(3)">👋 Vẫy tay</button>
-            </div>
-            <div id="gokku_status"></div>
-        </div>
-
     </div>
 
+    <!-- Toast thông báo bận -->
+    <div class="busy-toast" id="busy_toast">⚠️ Remote đang hoạt động — Không thể điều khiển ngay lúc này!</div>
+
     <script>
+        let _busyTimer = null;
+        function showBusy() {
+            let toast = document.getElementById('busy_toast');
+            toast.style.display = 'block';
+            clearTimeout(_busyTimer);
+            _busyTimer = setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        function handleBusy(res, onOk) {
+            res.json().then(d => {
+                if (d.status === 'busy') { showBusy(); }
+                else if (onOk) onOk(d);
+            });
+        }
+
         function quayServo() {
             let goc = document.getElementById('goc_input').value;
             document.getElementById('trang_thai_servo').innerText = "Đang quay...";
-            fetch('/api/servo?goc=' + goc).then(r=>r.json()).then(d => {
+            fetch('/api/servo?goc=' + goc).then(r => handleBusy(r, d => {
                 document.getElementById('trang_thai_servo').innerText = d.message;
                 setTimeout(() => document.getElementById('trang_thai_servo').innerText="", 2000);
-            });
+            }));
         }
 
         function capNhatLed() {
@@ -178,33 +186,23 @@ HTML_PAGE = """
             document.getElementById('g_val').innerText = g;
             document.getElementById('b_val').innerText = b;
             document.getElementById('mau_preview').style.backgroundColor = `rgb(${r},${g},${b})`;
-            fetch(`/api/led?r=${r}&g=${g}&b=${b}`);
+            fetch(`/api/led?r=${r}&g=${g}&b=${b}`).then(r => handleBusy(r, d => {
+                document.getElementById('led_status').innerText = '';
+            }));
         }
 
         function capNhatBlink() {
             let is_blink = document.getElementById('blink_toggle').checked;
             let speed = document.getElementById('blink_speed').value;
             document.getElementById('speed_val').innerText = speed + "s";
-            fetch(`/api/blink?state=${is_blink}&speed=${speed}`);
+            fetch(`/api/blink?state=${is_blink}&speed=${speed}`).then(r => handleBusy(r));
         }
 
         function guiLCD() {
             let text = document.getElementById('custom_text').value;
-            fetch('/api/lcd?text=' + encodeURIComponent(text));
-            document.getElementById('custom_text').value = "";
-        }
-
-        function gokkuAction(n) {
-            let names = {1: "🌤️ Đang đọc thời tiết...", 2: "💬 Gokku đang tám...", 3: "👋 Gokku đang vẫy tay..."};
-            document.getElementById('gokku_status').innerText = names[n] || "Đang xử lý...";
-            fetch('/api/gokku?key=' + n).then(r=>r.json()).then(d => {
-                if (d.status === "busy") {
-                    document.getElementById('gokku_status').innerText = "⚠️ Gokku đang bận, thử lại sau!";
-                } else {
-                    document.getElementById('gokku_status').innerText = names[n];
-                }
-                setTimeout(() => document.getElementById('gokku_status').innerText="", 5000);
-            });
+            fetch('/api/lcd?text=' + encodeURIComponent(text)).then(r => handleBusy(r, d => {
+                document.getElementById('custom_text').value = '';
+            }));
         }
 
         function quetCamBien() {
@@ -250,6 +248,9 @@ def api_status():
 
 @app.route('/api/servo')
 def api_servo():
+    with _remote_lock:
+        if remote_active:
+            return jsonify({"status": "busy", "message": "Remote dang hoat dong"})
     goc_dich = request.args.get('goc', default=0, type=int)
     # Chạy trong thread riêng để Flask không bị blocking
     threading.Thread(
@@ -258,11 +259,14 @@ def api_servo():
         daemon=True
     ).start()
     display.update_lcd("Servo moved:", f"{goc_dich} degrees")
-    return jsonify({"message": f"Da toi {goc_dich} do"})
+    return jsonify({"status": "ok", "message": f"Da toi {goc_dich} do"})
 
 
 @app.route('/api/led')
 def api_led():
+    with _remote_lock:
+        if remote_active:
+            return jsonify({"status": "busy", "message": "Remote dang hoat dong"})
     r = request.args.get('r', 0, type=int)
     g = request.args.get('g', 0, type=int)
     b = request.args.get('b', 0, type=int)
@@ -272,6 +276,9 @@ def api_led():
 
 @app.route('/api/blink')
 def api_blink():
+    with _remote_lock:
+        if remote_active:
+            return jsonify({"status": "busy", "message": "Remote dang hoat dong"})
     state = (request.args.get('state', 'false').lower() == 'true')
     speed = request.args.get('speed', default=0.5, type=float)
     actuators.set_blink(state, speed)
@@ -280,6 +287,9 @@ def api_blink():
 
 @app.route('/api/lcd')
 def api_lcd():
+    with _remote_lock:
+        if remote_active:
+            return jsonify({"status": "busy", "message": "Remote dang hoat dong"})
     text = request.args.get('text', '')
     if len(text) > 16:
         display.update_lcd(text[:16], text[16:32])
@@ -288,26 +298,6 @@ def api_lcd():
     return jsonify({"status": "ok"})
 
 
-@app.route('/api/gokku')
-def api_gokku():
-    """Kích hoạt hành động Gokku từ Web (giống bấm remote 1/2/3)."""
-    global gokku_busy
-    key = request.args.get('key', '')
-    with _gokku_lock:
-        if gokku_busy:
-            return jsonify({"status": "busy"})
-        gokku_busy = True
-
-    def run_gokku(k):
-        global gokku_busy
-        try:
-            _run_gokku_action(k)
-        finally:
-            with _gokku_lock:
-                gokku_busy = False
-
-    threading.Thread(target=run_gokku, args=(key,), daemon=True).start()
-    return jsonify({"status": "started"})
 
 
 # ============================================================
@@ -409,8 +399,10 @@ def ir_keyboard_loop():
     """
     Luồng ngầm xử lý remote + bàn phím.
     Chạy song song với Flask server.
+    remote_active = True khi Gokku đang thức (từ lúc PIR phát hiện đến khi ngủ lại),
+    trong suốt thời gian đó web KHÔNG được điều khiển LED/Servo/LCD.
     """
-    global gokku_busy
+    global gokku_busy, remote_active
     print("[SYS] Gokku dang cho lenh (remote + ban phim)...")
     ir_receiver.start_ir_thread()
     is_sleeping = True
@@ -419,6 +411,9 @@ def ir_keyboard_loop():
         if sensors.pir.motion_detected and is_sleeping:
             print("\n[PIR] Phat hien nguoi!")
             is_sleeping = False
+            # Đánh dấu remote đang hoạt động — web sẽ bị từ chối cho các module actuator
+            with _remote_lock:
+                remote_active = True
             gokku.miku_action_greet()
             gokku.say("Konnichiwa!\nGokku desu yo!", duration=4)
 
@@ -427,11 +422,8 @@ def ir_keyboard_loop():
                 key_code = ask_master_menu()
 
                 if key_code in ["1", "2", "3"]:
-                    # Không gọi nếu Gokku đang bận (ví dụ đang chạy lệnh từ Web)
+                    # Remote ưu tiên: thực thi ngay dù web có đang gửi lệnh
                     with _gokku_lock:
-                        if gokku_busy:
-                            print("[LOG] Gokku dang ban (tu Web). Bo qua lenh remote.")
-                            continue
                         gokku_busy = True
                     try:
                         _run_gokku_action(key_code)
@@ -445,6 +437,9 @@ def ir_keyboard_loop():
                     is_sleeping = True
                     actuators.turn_off()
                     display.lcd.clear()
+                    # Khi ngủ lại → web được phép điều khiển trở lại
+                    with _remote_lock:
+                        remote_active = False
 
         time.sleep(0.1)
 
