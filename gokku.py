@@ -48,11 +48,12 @@ def ask_gemini(prompt):
     
     try:
         response = gemini_model.generate_content(prompt)
-        text = response.text.replace("\n", " ").strip() 
+        text = response.text.replace("\n", "  ").strip() 
         
-        # Tính thời gian chạy chữ tương đối cho người dùng đọc (Khoảng 3.5 giây cho mỗi 32 ký tự)
+        # Tính thời gian chạy chữ tương đối cho người dùng đọc: 
+        # Đã tăng lên 5 giây cho mỗi 32 ký tự (1 trang LCD) và cộng dư dả thêm 4 giây ở cuối để đọc xong dòng cuối trước khi xóa màn hình.
         total_chars = len(text)
-        estimated_duration = max(4.0, (total_chars / 32.0) * 3.5)
+        estimated_duration = max(5.0, (total_chars / 32.0) * 5.0) + 4.0
         say(text, duration=estimated_duration)
     except Exception as e:
         print(f"[AI] Loi Gemini: {e}")
@@ -84,8 +85,10 @@ def show_weather():
 
     Rules:
     1. Reply ONLY in Romanized Japanese (Romaji plain text). NO emojis, NO kanji, NO hiragana.
-    2. Write max 3-4 short sentences (around 100-150 chars total), suitable for displaying on a scrolling LCD.
-    3. Analyze the sensors to report weather/environment gently, warning them playfully if it's too hot, dark, or if the device is tilted.
+    2. Length limitation: None. Feel free to make it as long as you need.
+    3. Content Rule 1: You MUST explicitly report ALL the exact reading values for Temperature, Humidity, Pressure, Light, and Tilt. Do not omit any sensor.
+    4. Content Rule 2: Provide an overall evaluation/commentary on the environment based on those full readings.
+    5. Content Rule 3: Conclude with a lively, caring, and roleplay-fitting advice for your colleague based on the weather conditions.
     """
     ask_gemini(prompt)
 
