@@ -88,6 +88,7 @@ def show_weather():
     3. Content Rule 1: You MUST explicitly report ALL the exact reading values for Temperature, Humidity, Pressure, Light, and Tilt. Do not omit any sensor.
     4. Content Rule 2: Provide an overall evaluation/commentary on the environment based on those full readings.
     5. Content Rule 3: Conclude with a lively, caring, and roleplay-fitting advice for your colleague based on the weather conditions.
+    6. CRITICAL LCD RULE: When stating sensor values, you MUST write the exact numbers and signs (e.g. "24.5 C", "60 %", "1012 hPa"). DO NOT spell out digits or percent into romaji (for example, never say "ni juu yon" or "pasento").
     """
     ask_gemini(prompt)
 

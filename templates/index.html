@@ -1,109 +1,386 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gokku Web Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; background-color: #1e1e1e; color: #fff; margin: 0; padding: 20px;}
-        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; max-width: 1200px; margin: 0 auto;}
-        .box { background: #2d2d2d; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); width: 320px; position: relative; text-align: left;}
-        h1 { color: #00d2ff; }
-        h2 { font-size: 18px; color: #aaa; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px;}
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-green: #34d399;
+            --accent-red: #fb7185;
+            --accent-orange: #fbbf24;
+        }
 
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .data-item { background: #222; padding: 15px; border-radius: 8px; text-align: center; }
-        .data-label { font-size: 12px; color: #888; }
-        .data-val { font-size: 24px; font-weight: bold; margin-top: 5px; }
-        .val-temp { color: #ff6b6b; } .val-hum { color: #4cd137; } .val-press { color: #fbc531; } .val-light { color: #00d2ff; }
-        .val-alert { color: #e84118; animation: blink 1s infinite;}
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, #090e17 0%, #1a2335 100%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
 
-        @keyframes blink { 50% { opacity: 0; } }
+        h1 {
+            color: var(--accent-blue);
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            text-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+            letter-spacing: 1px;
+            font-weight: 800;
+        }
 
-        .lcd-screen { background: #004400; color: #55ff55; font-family: 'Courier New', Courier, monospace; font-size: 22px; font-weight: bold; padding: 15px; border-radius: 5px; border: 4px solid #111; box-shadow: inset 0 0 10px #000; letter-spacing: 2px; }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
-        input[type=range] { width: 100%; margin: 10px 0; }
-        button { background: #00d2ff; color: #000; font-weight: bold; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; width: 100%;}
-        button:hover { background: #00a8cc; }
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 25px;
+            border-radius: 24px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: left;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+        }
 
-        .slider-label { display: flex; justify-content: space-between; font-size: 14px;}
-        #r_input { accent-color: #ff4c4c; } #g_input { accent-color: #4cff4c; } #b_input { accent-color: #4c4cff; }
-        #mau_preview { height: 40px; background-color: rgb(0,0,0); border-radius: 8px; margin-bottom: 15px; border: 2px solid #555;}
-        .blink-panel { margin-top: 15px; background: #333; padding: 15px; border-radius: 8px;}
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
 
-        /* Thông báo bận (remote đang hoạt động) */
-        .busy-toast { display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            background: #e84118; color: #fff; font-weight: bold; padding: 12px 28px;
-            border-radius: 10px; font-size: 15px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); z-index: 9999;
-            animation: fadeInUp 0.3s ease; }
-        @keyframes fadeInUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
-        .status-label { font-size: 12px; color: #f39c12; min-height: 16px; margin-top: 6px; text-align: center; }
-        </style>
+        h2 {
+            font-size: 1.25rem;
+            color: #ffffff;
+            margin-top: 0;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        /* Grouping internal structure */
+        .grid-blocks {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .data-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.02);
+            transition: background 0.3s;
+        }
+
+        .data-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .data-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-val {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-top: 8px;
+        }
+
+        /* Value Colors */
+        .color-temp { color: var(--accent-red); }
+        .color-hum { color: var(--accent-green); }
+        .color-press { color: var(--accent-orange); }
+        .color-light { color: var(--accent-blue); }
+        .color-alert { color: #ff3333; animation: pulse 1s infinite; }
+        .color-safe { color: var(--accent-green); }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* LCD Screen */
+        .lcd-screen {
+            background: #022c02;
+            color: #4ade80;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 20px;
+            border-radius: 12px;
+            border: 3px solid #000;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.2);
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 5px rgba(74, 222, 128, 0.5);
+        }
+
+        /* Inputs & Buttons */
+        input[type=text] {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+            box-sizing: border-box;
+        }
+
+        input[type=text]:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, #0284c7 100%);
+            color: white;
+            font-weight: 700;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s ease;
+            width: 100%;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.6);
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            margin: 15px 0;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #fff;
+            margin-top: -6px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+        }
+
+        #r_input::-webkit-slider-thumb { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
+        #g_input::-webkit-slider-thumb { background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green);}
+        #b_input::-webkit-slider-thumb { background: #60a5fa; box-shadow: 0 0 10px #60a5fa;}
+
+        #mau_preview {
+            height: 60px;
+            background-color: rgb(0, 0, 0);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: background-color 0.1s;
+        }
+
+        .blink-panel {
+            margin-top: 25px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Custom Toggle Checkbox */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent-blue);
+            cursor: pointer;
+        }
+
+        /* Toast */
+        .busy-toast {
+            display: none;
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ef4444;
+            color: #fff;
+            font-weight: bold;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1rem;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+            z-index: 1000;
+            animation: fadeInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translate(-50%, 30px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .input-group input { width: 100%; border-radius: 8px; }
+        .input-group button { width: auto; white-space: nowrap; border-radius: 8px; }
+        
+        #goc_hien_thi {
+            text-align: center; 
+            font-size: 2.5rem; 
+            color: var(--accent-blue); 
+            font-weight: 800; 
+            margin: 20px 0;
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+    </style>
 </head>
+
 <body>
-    <h1>🚀 Gokku Smart Hub</h1>
+    <h1>Gokku Smart Hub</h1>
     <div class="container">
 
-        <div class="box">
-            <h2>🌍 Môi trường</h2>
-            <div class="grid-2">
-                <div class="data-item"><div class="data-label">Nhiệt độ</div><div class="data-val val-temp" id="t_temp">--</div></div>
-                <div class="data-item"><div class="data-label">Độ ẩm</div><div class="data-val val-hum" id="t_hum">--</div></div>
-                <div class="data-item"><div class="data-label">Áp suất</div><div class="data-val val-press" id="t_press">--</div></div>
-                <div class="data-item"><div class="data-label">Ánh sáng</div><div class="data-val val-light" id="t_light">--</div></div>
+        <!-- Ô 1: Môi trường & Trạng thái -->
+        <div class="card">
+            <h2>🌍 環境 & ステータス</h2>
+            <div class="grid-blocks">
+                <div class="data-item">
+                    <div class="data-label">温度 (Nhiệt độ)</div>
+                    <div class="data-val color-temp" id="t_temp">--</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">湿度 (Độ ẩm)</div>
+                    <div class="data-val color-hum" id="t_hum">--</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">気圧 (Áp suất)</div>
+                    <div class="data-val color-press" id="t_press">--</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">光 (Ánh sáng)</div>
+                    <div class="data-val color-light" id="t_light">--</div>
+                </div>
+                <!-- Gom luôn Tilt và Motion vào đây -->
+                <div class="data-item">
+                    <div class="data-label">傾き (Nghiêng đổ)</div>
+                    <div class="data-val" id="t_tilt">--</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">動き (Chuyển động)</div>
+                    <div class="data-val" id="t_pir">--</div>
+                </div>
             </div>
         </div>
 
-        <div class="box">
-            <h2>🛡️ Trạng thái &amp; Màn hình LCD</h2>
-            <div class="grid-2" style="margin-bottom: 15px;">
-                <div class="data-item"><div class="data-label">Nghiêng đổ</div><div class="data-val" id="t_tilt">--</div></div>
-                <div class="data-item"><div class="data-label">Chuyển động</div><div class="data-val" id="t_pir">--</div></div>
-            </div>
-            <div class="data-label" style="margin-bottom: 5px;">Màn hình thiết bị đang hiện:</div>
+        <!-- Ô 2: Màn hình LCD & Động cơ Servo -->
+        <div class="card">
+            <h2>🖥️ LCD & サーボモーター</h2>
+            <div class="data-label" style="margin-bottom: 8px;">現在のLCD表示:</div>
             <div class="lcd-screen">
-                <div id="lcd1">Khởi động...</div>
-                <div id="lcd2">Vui lòng đợi</div>
+                <div id="lcd1">起動中...</div>
+                <div id="lcd2">お待ちください</div>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="custom_text" placeholder="メッセージを入力...">
+                <button onclick="guiLCD()">送信 (Gửi)</button>
             </div>
 
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <input type="text" id="custom_text" placeholder="Gửi tin nhắn lên LCD" style="flex: 1; padding: 8px; border-radius: 5px; border: none;">
-                <button style="width: auto; padding: 8px 15px;" onclick="guiLCD()">Gửi</button>
+            <div style="margin-top: 35px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 25px;">
+                <div class="data-label" style="text-align: center;">サーボモーター角度 (Góc Servo)</div>
+                <div id="goc_hien_thi">0°</div>
+                <input type="range" id="goc_input" min="0" max="180" value="0"
+                    oninput="document.getElementById('goc_hien_thi').innerText = this.value + '°'">
+                <button onclick="quayServo()" style="margin-top:10px;">回転を実行 (Thực thi)</button>
+                <div id="trang_thai_servo" style="color: var(--accent-green); text-align: center; margin-top: 12px; font-size: 0.9rem; min-height: 20px;"></div>
             </div>
         </div>
 
-        <div class="box">
-            <h2>💡 Điều khiển Đèn RGB</h2>
+        <!-- Ô 3: LED RGB -->
+        <div class="card">
+            <h2>💡 RGBライト制御</h2>
             <div id="mau_preview"></div>
-            <div class="slider-label"><span>Đỏ (R):</span><span id="r_val">0</span></div>
+            
+            <div class="slider-label"><span>赤 (R):</span><span id="r_val">0</span></div>
             <input type="range" id="r_input" min="0" max="255" value="0" oninput="capNhatLed()">
-            <div class="slider-label"><span>Xanh (G):</span><span id="g_val">0</span></div>
+            
+            <div class="slider-label"><span>緑 (G):</span><span id="g_val">0</span></div>
             <input type="range" id="g_input" min="0" max="255" value="0" oninput="capNhatLed()">
-            <div class="slider-label"><span>Dương (B):</span><span id="b_val">0</span></div>
+            
+            <div class="slider-label"><span>青 (B):</span><span id="b_val">0</span></div>
             <input type="range" id="b_input" min="0" max="255" value="0" oninput="capNhatLed()">
 
             <div class="blink-panel">
-                <label style="cursor: pointer; display: block; margin-bottom: 10px;">
-                    <input type="checkbox" id="blink_toggle" onchange="capNhatBlink()"> 🌟 Bật Nhấp Nháy
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="blink_toggle" onchange="capNhatBlink()"> 
+                    <span>点滅をオンにする (Bật nhấp nháy)</span>
                 </label>
-                <div class="slider-label"><span>Tốc độ:</span><span id="speed_val">0.5s</span></div>
-                <input type="range" id="blink_speed" min="0.05" max="2.0" step="0.05" value="0.5" oninput="capNhatBlink()">
+                <div class="slider-label" style="margin-top: 15px;"><span>速度 (Tốc độ):</span><span id="speed_val">0.5s</span></div>
+                <input type="range" id="blink_speed" min="0.05" max="2.0" step="0.05" value="0.5" oninput="capNhatBlink()" style="margin-top: 5px;">
             </div>
-            <div class="status-label" id="led_status"></div>
-        </div>
-
-        <div class="box">
-            <h2>⚙️ Động Cơ Servo</h2>
-            <div style="text-align: center; font-size: 32px; color: #00d2ff; font-weight: bold; margin: 20px 0;" id="goc_hien_thi">0°</div>
-            <input type="range" id="goc_input" min="0" max="180" value="0" oninput="document.getElementById('goc_hien_thi').innerText = this.value + '°'">
-            <button onclick="quayServo()">Thực thi quay</button>
-            <div id="trang_thai_servo" style="color: #4cd137; text-align: center; margin-top: 10px; height: 20px;"></div>
+            <div id="led_status" style="font-size: 0.85rem; color: var(--accent-orange); text-align: center; margin-top: 10px; min-height: 18px;"></div>
         </div>
 
     </div>
 
-    <!-- Toast thông báo bận -->
-    <div class="busy-toast" id="busy_toast">⚠️ Remote đang hoạt động — Không thể điều khiển ngay lúc này!</div>
+    <!-- Toast -->
+    <div class="busy-toast" id="busy_toast">⚠️ リモコン操作中です — 現在制御できません！</div>
 
     <script>
         let _busyTimer = null;
@@ -123,10 +400,10 @@
 
         function quayServo() {
             let goc = document.getElementById('goc_input').value;
-            document.getElementById('trang_thai_servo').innerText = "Đang quay...";
+            document.getElementById('trang_thai_servo').innerText = "回転中... (Đang quay...)";
             fetch('/api/servo?goc=' + goc).then(r => handleBusy(r, d => {
                 document.getElementById('trang_thai_servo').innerText = d.message;
-                setTimeout(() => document.getElementById('trang_thai_servo').innerText="", 2000);
+                setTimeout(() => document.getElementById('trang_thai_servo').innerText = "", 2000);
             }));
         }
 
@@ -138,6 +415,7 @@
             document.getElementById('g_val').innerText = g;
             document.getElementById('b_val').innerText = b;
             document.getElementById('mau_preview').style.backgroundColor = `rgb(${r},${g},${b})`;
+            
             fetch(`/api/led?r=${r}&g=${g}&b=${b}`).then(r => handleBusy(r, d => {
                 document.getElementById('led_status').innerText = '';
             }));
@@ -147,35 +425,50 @@
             let is_blink = document.getElementById('blink_toggle').checked;
             let speed = document.getElementById('blink_speed').value;
             document.getElementById('speed_val').innerText = speed + "s";
+            
             fetch(`/api/blink?state=${is_blink}&speed=${speed}`).then(r => handleBusy(r));
         }
 
         function guiLCD() {
             let text = document.getElementById('custom_text').value;
+            if(!text) return;
             fetch('/api/lcd?text=' + encodeURIComponent(text)).then(r => handleBusy(r, d => {
                 document.getElementById('custom_text').value = '';
             }));
         }
 
         function quetCamBien() {
-            fetch('/api/status').then(r=>r.json()).then(data => {
-                document.getElementById('t_temp').innerText = data.temp;
-                document.getElementById('t_hum').innerText = data.hum;
-                document.getElementById('t_press').innerText = data.press;
-                document.getElementById('t_light').innerText = data.light;
+            fetch('/api/status').then(r => r.json()).then(data => {
+                document.getElementById('t_temp').innerText = data.temp || "--";
+                document.getElementById('t_hum').innerText = data.hum || "--";
+                document.getElementById('t_press').innerText = data.press || "--";
+                document.getElementById('t_light').innerText = data.light || "--";
 
                 let tiltEl = document.getElementById('t_tilt');
-                tiltEl.innerText = data.tilt;
-                if(data.tilt === "BI DO!") tiltEl.className = "data-val val-alert"; else tiltEl.className = "data-val val-hum";
+                if (data.tilt === "BI DO!") {
+                    tiltEl.className = "data-val color-alert";
+                    tiltEl.innerText = "⚠️ 転倒！";
+                } else {
+                    tiltEl.className = "data-val color-safe";
+                    tiltEl.innerText = "✅ 安全";
+                }
 
                 let pirEl = document.getElementById('t_pir');
-                pirEl.innerText = data.pir;
-                if(data.pir === "Co nguoi!") pirEl.className = "data-val val-temp"; else pirEl.className = "data-val val-hum";
+                if (data.pir === "Co nguoi!") {
+                    pirEl.className = "data-val color-temp";
+                    pirEl.innerText = "🏃 検知あり"; 
+                } else {
+                    pirEl.className = "data-val color-safe";
+                    pirEl.innerText = "静止";
+                }
 
-                document.getElementById('lcd1').innerHTML = (data.lcd_line1 || "").replace(/ /g, '&nbsp;');
-                document.getElementById('lcd2').innerHTML = (data.lcd_line2 || "").replace(/ /g, '&nbsp;');
-            });
+                let l1 = data.lcd_line1 || "";
+                let l2 = data.lcd_line2 || "";
+                document.getElementById('lcd1').innerHTML = l1.replace(/ /g, '&nbsp;');
+                document.getElementById('lcd2').innerHTML = l2.replace(/ /g, '&nbsp;');
+            }).catch(e => console.log("Fetch error:", e));
         }
+        
         setInterval(quetCamBien, 1000);
         quetCamBien();
     </script>
