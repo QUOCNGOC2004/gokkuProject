@@ -14,7 +14,7 @@ except ImportError:
 
 if HAS_GENAI and hasattr(config, 'GEMINI_API_KEY') and config.GEMINI_API_KEY and config.GEMINI_API_KEY != "YOUR_API_KEY_HERE":
     genai.configure(api_key=config.GEMINI_API_KEY)
-    gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+    gemini_model = genai.GenerativeModel("gemini-pro")
 else:
     gemini_model = None
 
