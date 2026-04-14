@@ -430,8 +430,9 @@ def ir_keyboard_loop():
     Chạy song song với Flask server.
 
     Quy tắc ưu tiên:
-    - Remote luôn ưu tiên: set flag bận TRƯỚC khi thực thi.
-    - Web chỉ bị từ chối khi đúng module đó đang bận bởi remote.
+    - Remote luôn ưu tiên: set flag bận TRƯỚC khi thực thi lệnh.
+    - "Bận" = đang THỰC THI lệnh từ remote (greeting, say, action_wave...)
+    - Menu chờ lệnh KHÔNG tính là bận (web vẫn được ghi LCD trong lúc này).
     - Khi remote hoàn tất, flag tự clear → web điều khiển được ngay.
     """
     print("[SYS] Gokku dang cho lenh (remote + ban phim)...")
@@ -454,10 +455,8 @@ def ir_keyboard_loop():
 
             while not is_sleeping:
                 print("\n[SYS] Gokku dang cho lenh...")
-                # Hiển thị menu → chỉ LCD bận
-                _mark_busy(_lcd_busy)
+                # Menu chờ lệnh: KHÔNG đánh dấu bận — web vẫn được điều khiển tự do
                 key_code = ask_master_menu()
-                _mark_free(_lcd_busy)
 
                 if key_code in ["1", "2", "3"]:
                     # Remote ưu tiên: _run_gokku_action tự quản lý flag bận/rảnh
