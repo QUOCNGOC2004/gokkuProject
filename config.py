@@ -1,12 +1,16 @@
 import board
 import busio
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # --- CẤU HÌNH CHUNG ---
 AWAKE_TIME = 120.0
 PAGE_FLIP_SEC = 2.0
 
 # --- GEMINI AI ---
-GEMINI_API_KEY = "YOUR_API_KEY_HERE"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 
 # --- CẤU HÌNH CHÂN GPIO ---
