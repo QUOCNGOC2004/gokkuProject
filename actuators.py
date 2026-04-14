@@ -26,9 +26,6 @@ BLINK_COLORS = [
     (0, 1, 1),
 ]
 
-# ============================================================
-# TRẠNG THÁI LED (dùng chung với Flask Web)
-# ============================================================
 _led_color = (0.0, 0.0, 0.0)   # tuple float 0.0–1.0
 _is_blinking = False
 _blink_speed = 0.5              # giây
@@ -86,9 +83,6 @@ def led_loop():
         time.sleep(0.05)
 
 
-# ============================================================
-# SERVO – chuyển đổi góc 0–180° → giá trị -1.0–1.0
-# ============================================================
 _servo_angle = 0        # góc hiện tại (0–180)
 _servo_lock = threading.Lock()
 
@@ -124,9 +118,6 @@ def get_servo_angle() -> int:
     return _servo_angle
 
 
-# ============================================================
-# CÁC HÀM GỐC CỦA DỰ ÁN (giữ nguyên)
-# ============================================================
 def blink_short(flashes=4):
     for _ in range(flashes):
         led.color = random.choice(BLINK_COLORS)

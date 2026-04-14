@@ -6,9 +6,7 @@ import gokku
 from web_app import app
 from system_loops import sensor_loop, ir_keyboard_loop
 
-# ============================================================
-# KHỞI ĐỘNG HỆ THỐNG
-# ============================================================
+
 def main():
     print("=" * 50)
     print("  Gokku Smart Hub — Web + Remote + Keyboard")

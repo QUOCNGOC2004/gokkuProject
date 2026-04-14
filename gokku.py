@@ -50,8 +50,7 @@ def ask_gemini(prompt):
         response = gemini_model.generate_content(prompt)
         text = response.text.replace("\n", "  ").strip() 
         
-        # Tính thời gian chạy chữ tương đối cho người dùng đọc: 
-        # Đã tăng lên 5 giây cho mỗi 32 ký tự (1 trang LCD) và cộng dư dả thêm 4 giây ở cuối để đọc xong dòng cuối trước khi xóa màn hình.
+        # Tính thời gian chạy chữ tương đối cho người dùng
         total_chars = len(text)
         estimated_duration = max(5.0, (total_chars / 32.0) * 5.0) + 4.0
         say(text, duration=estimated_duration)

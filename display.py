@@ -15,9 +15,6 @@ lcd = CharLCD(
     auto_linebreaks=False,
 )
 
-# ============================================================
-# TRẠNG THÁI LCD (dùng chung với Flask Web)
-# ============================================================
 lcd_line1 = "Khoi dong..."
 lcd_line2 = "He thong..."
 _lcd_lock = threading.Lock()
@@ -45,10 +42,6 @@ def get_lcd_state():
     with _lcd_lock:
         return {"lcd_line1": lcd_line1, "lcd_line2": lcd_line2}
 
-
-# ============================================================
-# CÁC HÀM GỐC (giữ nguyên, thêm cập nhật state)
-# ============================================================
 def _build_pages(text):
     lines = []
     for raw in text.split("\n"):
