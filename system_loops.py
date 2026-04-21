@@ -1,8 +1,5 @@
-import sys
 import time
-import random
 import queue
-from select import select
 
 import config
 import display
@@ -12,34 +9,74 @@ import ir_receiver
 import gokku
 import shared_state
 
+# Sentinel trả về khi chế độ điều khiển thay đổi từ bên trong menu
+_MODE_CHANGED = "MODE_CHANGED"
+
+# --- TRẠNG THÁI LED CYCLE ---
+_led_cycle_state = 0      # 0=OFF  1=RED  2=GREEN  3=BLUE
+_last_button3_time = 0.0  # Timestamp lần bấm nút 3 gần nhất (debounce)
+
+_LED_COLORS = [
+    (0,   0,   0),    # 0: OFF
+    (255, 0,   0),    # 1: RED
+    (0,   255, 0),    # 2: GREEN
+    (0,   0,   255),  # 3: BLUE
+]
+_LED_LABELS = ["OFF", "DO (RED)", "XANH LA (GREEN)", "XANH DUONG (BLUE)"]
+
+
+def _handle_led_cycle():
+    """
+    Nút 3: chu kỳ màu LED OFF → RED → GREEN → BLUE → OFF.
+    Chỉ hoạt động ở Remote Mode, có debounce 1 giây.
+    """
+    global _led_cycle_state, _last_button3_time
+    if not shared_state.remote_control_mode:
+        return  # Web Mode: nút 3 bị khóa
+    now = time.time()
+    if now - _last_button3_time < 1.0:
+        return  # Debounce: bỏ qua nếu bấm quá nhanh
+    _last_button3_time = now
+    _led_cycle_state = (_led_cycle_state + 1) % 4
+    r, g, b = _LED_COLORS[_led_cycle_state]
+    actuators.set_blink(False)       # Tắt chế độ nhấp nháy trước khi đặt màu
+    actuators.set_led_rgb(r, g, b)
+    print(f"[LED] Mau: {_LED_LABELS[_led_cycle_state]}")
+
+
+def _handle_toggle_mode():
+    """
+    Nút 4: chuyển Remote Mode ↔ Web Mode.
+    Hoạt động ở mọi trạng thái (ngủ, menu, đang chờ).
+    """
+    shared_state.remote_control_mode = not shared_state.remote_control_mode
+    if shared_state.remote_control_mode:
+        display.update_lcd("Remote Mode", "Web Locked")
+        print("[MODE] -> Remote Mode (Web bi khoa)")
+    else:
+        actuators.turn_off()         # Tắt LED + detach servo trước khi trả quyền web
+        display.update_lcd("Web Mode", "Remote Locked")
+        print("[MODE] -> Web Mode (Remote bi khoa)")
+
+
 def _run_gokku_action(key_code: str):
     """
-    Thực thi hành động Gokku theo mã phím 1/2/3.
+    Thực thi hành động Gokku theo mã phím 1/2.
+    Tự động bỏ qua nếu không ở Remote Mode.
     """
+    if not shared_state.remote_control_mode:
+        return  # Web Mode: bỏ qua lệnh remote
+
     if key_code == "1":
-        shared_state.mark_busy(shared_state.led_busy, shared_state.lcd_busy)
-        try:
-            gokku.show_weather()
-        finally:
-            shared_state.mark_free(shared_state.led_busy, shared_state.lcd_busy)
+        gokku.show_weather()
 
     elif key_code == "2":
-        shared_state.mark_busy(shared_state.led_busy, shared_state.lcd_busy)
-        try:
-            gokku.ai_oshaberi()
-        finally:
-            shared_state.mark_free(shared_state.led_busy, shared_state.lcd_busy)
-
-    elif key_code == "3":
-        shared_state.mark_busy(shared_state.led_busy, shared_state.lcd_busy, shared_state.servo_busy)
-        try:
-            gokku.say("Ryoukai! Ima\nte wo furu ne.", duration=2)
-            actuators.action_wave(times=2)
-        finally:
-            shared_state.mark_free(shared_state.led_busy, shared_state.lcd_busy, shared_state.servo_busy)
+        gokku.say("Ryoukai! Ima\nte wo furu ne.", duration=2)
+        actuators.action_wave(times=2)
 
 
 def sensor_loop():
+    """Luồng daemon: đọc 5 cảm biến mỗi 2 giây, ghi vào shared_state."""
     while True:
         try:
             t, h = sensors.read_dht11()
@@ -80,8 +117,11 @@ def sensor_loop():
 
 
 def ask_master_menu():
-    """Hiện menu menu trên LCD, chờ input từ remote/bàn phím."""
-    menu_text = "Konnichiwa! Nani\nwo shimasu ka?\n1.Tenki\n2.Oshaberi\n3.Aisatsu"
+    """
+    Hiện menu trên LCD, chờ input từ remote hồng ngoại.
+    Trả về: "1" | "2" | _MODE_CHANGED | None (timeout)
+    """
+    menu_text = "Konnichiwa! Nani\nwo shimasu ka?\n1.Tenki\n2.Aisatsu"
     pages = display.get_pages(menu_text)
 
     start_time = time.time()
@@ -89,6 +129,10 @@ def ask_master_menu():
     last_flip = 0.0
 
     while time.time() - start_time < config.AWAKE_TIME:
+        # Thoát ngay nếu mode đã chuyển sang Web (do nút 4 từ bên ngoài)
+        if not shared_state.remote_control_mode:
+            return _MODE_CHANGED
+
         now = time.time()
         if now - last_flip >= config.PAGE_FLIP_SEC:
             display.lcd.clear()
@@ -96,60 +140,74 @@ def ask_master_menu():
             page_idx = (page_idx + 1) % len(pages)
             last_flip = now
 
-        # Bàn phím số
-        r, _, _ = select([sys.stdin], [], [], 0.1)
-        if r and sys.stdin in r:
-            user_input = sys.stdin.readline().strip()
-            if user_input in ["1", "2", "3"]:
-                return user_input
-
-        # Remote Hồng Ngoại
+        # Đọc Remote Hồng Ngoại
         try:
             ir_input = ir_receiver.ir_queue.get_nowait()
-            if ir_input in ["1", "2", "3"]:
+            if ir_input in ["1", "2"]:
                 return ir_input
+            elif ir_input == "3":
+                _handle_led_cycle()
+            elif ir_input == "4":
+                _handle_toggle_mode()
+                return _MODE_CHANGED    # Thoát menu ngay sau khi đổi mode
         except queue.Empty:
             pass
+
+        time.sleep(0.1)
 
     return None
 
 
 def ir_keyboard_loop():
     """
-    Luồng ngầm xử lý remote + bàn phím.
+    Luồng daemon: xử lý Remote Hồng Ngoại + PIR.
+
+    Máy trạng thái:
+      - Sleeping (is_sleeping=True) : chờ PIR phát hiện người.
+      - Awake   (is_sleeping=False) : hiển thị menu, nhận lệnh, thực thi.
+    Nút 4 hoạt động ở cả 2 trạng thái.
     """
-    print("[SYS] Gokku dang cho lenh (remote + ban phim)...")
+    print("[SYS] Gokku dang cho lenh (Remote Mode)...")
     ir_receiver.start_ir_thread()
     is_sleeping = True
 
     while True:
-        if sensors.pir.motion_detected and is_sleeping:
+        # ── NÚT 4: luôn hoạt động kể cả khi ngủ ──────────────────────────
+        try:
+            ir_input = ir_receiver.ir_queue.get_nowait()
+            if ir_input == "4":
+                _handle_toggle_mode()
+                is_sleeping = True      # Reset về sleeping sau mỗi lần đổi mode
+        except queue.Empty:
+            pass
+
+        # ── PIR + MENU: chỉ chạy khi ở Remote Mode ───────────────────────
+        if sensors.pir.motion_detected and is_sleeping and shared_state.remote_control_mode:
             print("\n[PIR] Phat hien nguoi!")
             is_sleeping = False
 
-            shared_state.mark_busy(shared_state.led_busy, shared_state.servo_busy, shared_state.lcd_busy)
-            try:
-                gokku.miku_action_greet()
-                gokku.say("Konnichiwa!\nGokku desu yo!", duration=4)
-            finally:
-                shared_state.mark_free(shared_state.led_busy, shared_state.servo_busy, shared_state.lcd_busy)
+            gokku.gokku_action_greet()
+            gokku.say("Konnichiwa!\nGokku desu yo!", duration=4)
 
             while not is_sleeping:
                 print("\n[SYS] Gokku dang cho lenh...")
                 key_code = ask_master_menu()
 
-                if key_code in ["1", "2", "3"]:
+                if key_code in ["1", "2"]:
                     _run_gokku_action(key_code)
 
                 elif key_code is None:
+                    # Timeout 120s: không có ai tương tác → ngủ
                     print("[LOG] Khong nhan duoc tin hieu. He thong nghi.")
-                    shared_state.mark_busy(shared_state.led_busy, shared_state.lcd_busy)
-                    try:
-                        gokku.say("Daremo inai.\nSuriipu shimasu.", duration=3)
-                    finally:
-                        shared_state.mark_free(shared_state.led_busy, shared_state.lcd_busy)
+                    gokku.say("Daremo inai.\nSuriipu shimasu.", duration=3)
                     is_sleeping = True
                     actuators.turn_off()
                     display.lcd.clear()
+
+                elif key_code == _MODE_CHANGED:
+                    # Nút 4 bấm trong lúc đang ở menu → thoát về sleeping
+                    print("[MODE] Thoat menu do doi mode.")
+                    is_sleeping = True
+                    # LCD đã được cập nhật bởi _handle_toggle_mode()
 
         time.sleep(0.1)

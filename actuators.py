@@ -109,7 +109,7 @@ def servo_to_angle(target_angle: int):
         for angle in range(start, end + step, step):
             servo.value = servo_to_value(angle)
 
-        time.sleep(0.2)
+        #time.sleep(0.2)
         servo.value = None   # detach
         _servo_angle = end
 

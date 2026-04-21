@@ -27,11 +27,10 @@ IDLE_PHRASES = [
 
 
 def say(text, duration=3.0):
-    threading.Thread(target=actuators.blink_short, daemon=True).start()
     display.display_text(text, total_duration=duration)
 
 
-def miku_action_greet():
+def gokku_action_greet():
     threading.Thread(target=actuators.flash_long, args=(5,), daemon=True).start()
     threading.Thread(target=actuators.action_wave, args=(3,), daemon=True).start()
 
@@ -42,8 +41,7 @@ def ask_gemini(prompt):
         say("API Key erro!\nGemini muko.", duration=3)
         return
     
-    # Bật nháy đèn ngắn và báo trên màn hình đang suy nghĩ
-    threading.Thread(target=actuators.blink_short, args=(2,), daemon=True).start()
+    # Báo trên màn hình đang suy nghĩ
     display.write_direct("Kangaechuu...", "Matte ne~")
     
     try:
@@ -92,19 +90,3 @@ def show_weather():
     """
     ask_gemini(prompt)
 
-
-def ai_oshaberi():
-    """ Tám chuyện ngẫu nhiên cùng đồng nghiệp thay cho chức năng cũ """
-    if not gemini_model:
-        say(random.choice(IDLE_PHRASES), duration=3)
-        return
-
-    prompt = """
-    You are Gokku, a friendly, polite, and caring human office worker.
-    Say a random, creative greeting, a short encouraging message, or a gentle reminder (e.g. stretch arms, drink water) to your human colleague/boss.
-    
-    Rules:
-    1. Reply ONLY in Romanized Japanese (Romaji plain text). NO emojis, NO kanji, NO hiragana.
-    2. Write max 2-3 short sentences (around 80-120 chars total) so it fits on an LCD.
-    """
-    ask_gemini(prompt)
