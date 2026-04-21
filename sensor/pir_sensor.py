@@ -1,18 +1,17 @@
 from gpiozero import MotionSensor
 import config
 
+pir = None
 try:
     pir = MotionSensor(config.PIR_PIN)
+    print("[HW] PIR san sang.")
 except Exception as e:
-    print(f"[-] Không thể khởi tạo cảm biến chuyển động PIR: {e}")
-    pir = None
+    print(f"[HW] PIR loi: {e}")
 
 def read_pir():
-    """Trả về True nếu phát hiện chuyển động, False nếu không, hoặc None nếu lỗi"""
+    if pir is None:
+        return None
     try:
-        if pir is None:
-            return None
         return pir.motion_detected
-    except Exception as e:
-        print(f"[-] Lỗi đọc tính hiệu PIR: {e}")
+    except:
         return None

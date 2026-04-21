@@ -1,18 +1,18 @@
 from gpiozero import MCP3008
 import config
 
+light_sensor = None
 try:
-    ldr = MCP3008(channel=config.LDR_CHANNEL)
+    light_sensor = MCP3008(channel=config.LDR_CHANNEL)
+    print("[HW] MCP3008 (LDR) san sang.")
 except Exception as e:
-    print(f"[-] Không thể khởi tạo ADC MCP3008 cho LDR: {e}")
-    ldr = None
+    print(f"[HW] MCP3008 loi: {e}")
 
 def read_ldr():
-    """Đọc giá trị biến trở/LDR, trả về dải float từ 0.0 (tối thiểu) đến 1.0 (tối đa), hoặc None"""
+    if light_sensor is None:
+        return None
     try:
-        if ldr is None:
-            return None
-        return ldr.value
-    except Exception as e:
-        print(f"[-] Lỗi đọc giá trị LDR: {e}")
+        val = light_sensor.value
+        return val if val >= 0.02 else None
+    except:
         return None

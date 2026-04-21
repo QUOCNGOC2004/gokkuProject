@@ -31,10 +31,9 @@ def format_sensor_data():
     pages.append([t_str[:16], h_str[:16]])
 
     # 2. BMP180
-    p, t2 = read_bmp()
+    p = read_bmp()
     p_str = f"Press:{p:.1f}Pa" if p is not None else "Press: ERR"
-    t2_str = f"BMP_Tp:{t2:.1f} C" if t2 is not None else "BMP_Tp: ERR"
-    pages.append([p_str[:16], t2_str[:16]])
+    pages.append([p_str[:16], "".ljust(16)])
 
     # 3. LDR & PIR
     ldr_val = read_ldr()

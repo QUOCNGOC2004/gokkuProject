@@ -1,19 +1,17 @@
 from gpiozero import DigitalInputDevice
 import config
 
+tilt_sensor = None
 try:
-    # DigitalInputDevice sẽ cung cấp is_active cho high/low
-    tilt = DigitalInputDevice(config.TILT_PIN)
+    tilt_sensor = DigitalInputDevice(config.TILT_PIN)
+    print("[HW] Tilt Sensor san sang.")
 except Exception as e:
-    print(f"[-] Không thể khởi tạo cảm biến độ nghiêng Tilt: {e}")
-    tilt = None
+    print(f"[HW] Tilt Sensor loi: {e}")
 
 def read_tilt():
-    """Trả về True nếu nghiêng (kích hoạt), False nếu cân bằng, hoặc None nếu lỗi"""
+    if tilt_sensor is None:
+        return None
     try:
-        if tilt is None:
-            return None
-        return tilt.is_active
-    except Exception as e:
-        print(f"[-] Lỗi đọc tín hiệu cảm biến Tilt: {e}")
+        return tilt_sensor.value
+    except:
         return None
