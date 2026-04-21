@@ -3,6 +3,7 @@ import queue
 from sensor.ir_receiver import start_ir_thread, ir_queue
 from display import trigger_sensor_display
 from servo import trigger_sweep, home, reset
+from led import cycle_next, turn_off as led_off
 
 
 def main():
@@ -29,15 +30,21 @@ def main():
                 elif button_pressed == "2":
                     trigger_sweep()
 
+                # Nút 3 → Xoay vòng LED: RED → GREEN → BLUE → OFF
+                elif button_pressed == "3":
+                    cycle_next()
+
             except queue.Empty:
                 pass
 
     except KeyboardInterrupt:
         print("\n[!] Dọn dẹp ứng dụng, đang thoát...")
-        reset()   # Detach servo trước khi thoát
+        reset()    # Detach servo
+        led_off()  # Tắt LED
     except Exception as e:
         print(f"\n[!] Lỗi chưa xác định trên luồng chính: {e}")
         reset()
+        led_off()
 
 
 if __name__ == "__main__":
