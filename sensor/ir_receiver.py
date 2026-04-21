@@ -48,9 +48,9 @@ def ir_reader_thread():
                         ir_queue.put(config.IR_BUTTONS[hex_code])
                 buffer = []
     except Exception as e:
-        print(f"[IR] Loi luong doc hong ngoai: {e}")
+        print(f"[IR] Lỗi luồng đọc hồng ngoại: {e}")
 
 
 def start_ir_thread():
     threading.Thread(target=ir_reader_thread, daemon=True).start()
-    print("[HW] IR Receiver san sang.")
+    print("[HW] IR Receiver sẵn sàng.")

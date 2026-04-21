@@ -1,40 +1,31 @@
-import threading
-
-import actuators
-import display
-import gokku
-from web_app import app
-from system_loops import sensor_loop, ir_keyboard_loop
-
+import time
+import queue
+from sensor.ir_receiver import start_ir_thread, ir_queue
+from display_manager import trigger_sensor_display
 
 def main():
-    print("=" * 50)
-    print("  Gokku Smart Hub — Web + Remote + Keyboard")
-    print("=" * 50)
-
-    # Thông báo khởi động lên LCD
-    display.update_lcd("Gokku System", "Web Online!")
-
-    # Khởi động 3 luồng daemon
-    threading.Thread(target=sensor_loop, daemon=True, name="SensorLoop").start()
-    threading.Thread(target=ir_keyboard_loop, daemon=True, name="IRKeyboard").start()
-    threading.Thread(target=actuators.led_loop, daemon=True, name="LEDLoop").start()
-
-    print("------------------------------------------")
-    print("[OK] Web Dashboard: http://<IP_CUA_PI>:5000")
-    print("[OK] Remote & Ban Phim: san sang")
-    print("------------------------------------------")
-
+    
+    # 1. Khởi tạo luồng bắt tín hiệu Remote IR
+    start_ir_thread()
+    
     try:
-        # Flask chạy ở main thread, reloader tắt để tránh khởi động luồng 2 lần
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+        # Vòng lặp chính đọc lệnh từ queue
+        while True:
+            try:
+                # timeout = 1 để mỗi giây luồng chính có thể xử lý việc khác hoặc cho phép thoát KeyboardInterrupt dễ dàng
+                button_pressed = ir_queue.get(timeout=1.0)
+                print(f"[*] Nhận tín hiệu Remote: {button_pressed}")
+                
+                # Khi bấm phím 1
+                if button_pressed == "1":
+                    trigger_sensor_display()
+            except queue.Empty:
+                pass
+            
     except KeyboardInterrupt:
-        print("\n[SYS] Tat he thong...")
-        gokku.say("Sayounara!\nMata aou ne.", duration=2)
-        actuators.turn_off()
-        display.lcd.clear()
-        print("[SYS] Hen gap lai!")
-
+        print("\n[!] Dọn dẹp ứng dụng, đang thoát...")
+    except Exception as e:
+        print(f"\n[!] Lỗi chưa xác định trên luồng chính: {e}")
 
 if __name__ == "__main__":
     main()
