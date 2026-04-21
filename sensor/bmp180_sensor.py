@@ -1,9 +1,9 @@
-from bmp180 import bmp180
+from bmp180 import BMP180
 import config
 
 try:
     # Mặc định thư viện sử dụng I2C (SMBus) địa chỉ 0x77
-    bmp = bmp180(0x77)
+    bmp = BMP180(0x77)
 except Exception as e:
     print(f"[-] Không thể khởi tạo BMP180: {e}")
     bmp = None
