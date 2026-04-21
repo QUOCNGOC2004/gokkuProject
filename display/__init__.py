@@ -1,6 +1,7 @@
 # Public API của package display
-# Import từ đây thay vì import trực tiếp vào các module con
 
 from display.display_controller import trigger_sensor_display
+from display.text_scroller import show_status, scroll_in_thread
 
-__all__ = ["trigger_sensor_display"]
+__all__ = ["trigger_sensor_display", "show_status", "scroll_in_thread"]
+

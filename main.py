@@ -1,7 +1,8 @@
 import time
 import queue
 from sensor.ir_receiver import start_ir_thread, ir_queue
-from display import trigger_sensor_display
+from display import show_status, scroll_in_thread
+from ai import show_weather
 from servo import trigger_sweep, home, reset
 from led import cycle_next, turn_off as led_off
 
@@ -22,9 +23,9 @@ def main():
                 button_pressed = ir_queue.get(timeout=1.0)
                 print(f"[*] Nhận tín hiệu Remote: {button_pressed}")
 
-                # Nút 1 → Hiển thị cảm biến lên LCD
+                # Nút 1 → Gọi Gemini AI đọc thời tiết, fallback sang dữ liệu thô nếu lỗi
                 if button_pressed == "1":
-                    trigger_sensor_display()
+                    show_weather()
 
                 # Nút 2 → Servo quay 0° → 180° → 0°
                 elif button_pressed == "2":
