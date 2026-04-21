@@ -1,3 +1,5 @@
+import threading
+
 from ai.gemini_client import ask
 from display.text_scroller import show_status, scroll_in_thread
 from display.display_controller import trigger_sensor_display
@@ -6,6 +8,9 @@ from sensor.bmp180_sensor import read_bmp
 from sensor.ldr_sensor import read_ldr
 from sensor.pir_sensor import read_pir
 from sensor.tilt_sensor import read_tilt
+
+# Cờ chống gọi AI chồng chéo khi đang xử lý
+_ai_running = False
 
 
 def _build_prompt() -> str:
@@ -39,27 +44,39 @@ Quy tắc bắt buộc:
 3. Đánh giá tổng thể thời tiết / môi trường dựa trên số liệu.
 4. Kết thúc bằng 1 lời khuyên phù hợp với thời tiết / môi trường.
 5. Viết liền mạch, không xuất hiện các ký tự đặc biệt, hashtag hay emoji.
-6. Không trả lời quá dài, quá ngắn, chỉ trả lời vừa đủ để hiển thị trên màn hình LCD 16x2.
 """
 
 
-def show_weather() -> None:
-    """
-    Logic chinh cho nut 1:
-    - Neu Gemini goi thanh cong → hien 'Dang suy nghi...' → cuon phan hoi.
-    - Neu that bai (loi, rate-limit, v.v.) → fallback hien du lieu cam bien tho.
-    """
-    # Hien thi trang thai cho ngay lap tuc
+def _weather_task() -> None:
+    """Toàn bộ tác vụ AI chạy trong daemon thread riêng — không block main thread."""
+    global _ai_running
+
     show_status("Dang suy nghi..", "Cho ti nha...")
 
     prompt = _build_prompt()
     response = ask(prompt)
 
     if response:
-        # Thanh cong → cuon phan hoi AI
         print(f"[AI] Nhan duoc {len(response)} ky tu, bat dau cuon LCD...")
         scroll_in_thread(response)
     else:
-        # That bai → fallback hien du lieu tho
         print("[AI] Fallback: hien du lieu cam bien tho.")
         trigger_sensor_display()
+
+    _ai_running = False
+
+
+def show_weather() -> None:
+    """
+    Nut 1: Khoi dong _weather_task trong daemon thread rieng.
+    - Main thread KHONG bi block trong khi cho Gemini.
+    - Neu dang co tac vu AI chay → bo qua de chong xung dot.
+    """
+    global _ai_running
+
+    if _ai_running:
+        print("[AI] Dang xu ly, bo qua lenh.")
+        return
+
+    _ai_running = True
+    threading.Thread(target=_weather_task, daemon=True).start()
