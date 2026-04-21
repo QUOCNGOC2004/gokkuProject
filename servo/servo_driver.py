@@ -50,10 +50,9 @@ def move_to(target_angle: int) -> None:
         if start == end:
             return
 
-        step = 1 if start < end else -1
-        for angle in range(start, end + step, step):
-            _servo.value = angle_to_value(angle)
-            # time.sleep(0.005)
+        # Set thẳng đến góc đích, chờ servo vật lý quay xong rồi detach
+        _servo.value = angle_to_value(end)
+        time.sleep(0.5)   # Chờ cơ quay đến đích (SG90 ~0.1s/60°)
 
         # Detach khi đến đích để ngăn rung/giật khi đứng im
         _servo.value = None
