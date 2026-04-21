@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gokku Web Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/index.css">
+</head>
+
+<body>
+    <h1>Gokku Smart Hub</h1>
+    <div id="mode_badge" class="mode-badge mode-remote">🔴 リモコンモード — Web制御不可</div>
+    <div class="container">
+
+        <!-- Ô 1: Môi trường & Trạng thái -->
+        <div class="card">
+            <h2>🌍 環境 & ステータス</h2>
+            <div class="grid-blocks">
+                <div class="data-item">
+                    <div class="data-label">温度 (Nhiệt độ)</div>
+                    <div class="data-val color-temp" id="t_temp">--</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">湿度 (Độ ẩm)</div>
+                    <div class="data-val color-hum" id="t_hum">--</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">気圧 (Áp suất)</div>
+                    <div class="data-val color-press" id="t_press">--</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">光 (Ánh sáng)</div>
+                    <div class="data-val color-light" id="t_light">--</div>
+                </div>
+                <!-- Gom luôn Tilt và Motion vào đây -->
+                <div class="data-item">
+                    <div class="data-label">傾き (Nghiêng đổ)</div>
+                    <div class="data-val" id="t_tilt">--</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">動き (Chuyển động)</div>
+                    <div class="data-val" id="t_pir">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ô 2: Màn hình LCD & Động cơ Servo -->
+        <div class="card">
+            <h2>🖥️ LCD & サーボモーター</h2>
+            <div class="data-label" style="margin-bottom: 8px;">現在のLCD表示:</div>
+            <div class="lcd-screen">
+                <div id="lcd1">起動中...</div>
+                <div id="lcd2">お待ちください</div>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="custom_text" placeholder="メッセージを入力...">
+                <button onclick="guiLCD()">送信 (Gửi)</button>
+            </div>
+
+            <div style="margin-top: 35px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 25px;">
+                <div class="data-label" style="text-align: center;">サーボモーター角度 (Góc Servo)</div>
+                <div id="goc_hien_thi">0°</div>
+                <input type="range" id="goc_input" min="0" max="180" value="0"
+                    oninput="document.getElementById('goc_hien_thi').innerText = this.value + '°'">
+                <button onclick="quayServo()" style="margin-top:10px;">回転を実行 (Thực thi)</button>
+                <div id="trang_thai_servo" style="color: var(--accent-green); text-align: center; margin-top: 12px; font-size: 0.9rem; min-height: 20px;"></div>
+            </div>
+        </div>
+
+        <!-- Ô 3: LED RGB -->
+        <div class="card">
+            <h2>💡 RGBライト制御</h2>
+            <div id="mau_preview"></div>
+            
+            <div class="slider-label"><span>赤 (R):</span><span id="r_val">0</span></div>
+            <input type="range" id="r_input" min="0" max="255" value="0" oninput="capNhatLed()">
+            
+            <div class="slider-label"><span>緑 (G):</span><span id="g_val">0</span></div>
+            <input type="range" id="g_input" min="0" max="255" value="0" oninput="capNhatLed()">
+            
+            <div class="slider-label"><span>青 (B):</span><span id="b_val">0</span></div>
+            <input type="range" id="b_input" min="0" max="255" value="0" oninput="capNhatLed()">
+
+            <div class="blink-panel">
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="blink_toggle" onchange="capNhatBlink()"> 
+                    <span>点滅をオンにする (Bật nhấp nháy)</span>
+                </label>
+                <div class="slider-label" style="margin-top: 15px;"><span>速度 (Tốc độ):</span><span id="speed_val">0.5s</span></div>
+                <input type="range" id="blink_speed" min="0.05" max="2.0" step="0.05" value="0.5" oninput="capNhatBlink()" style="margin-top: 5px;">
+            </div>
+            <div id="led_status" style="font-size: 0.85rem; color: var(--accent-orange); text-align: center; margin-top: 10px; min-height: 18px;"></div>
+        </div>
+
+    </div>
+
+    <!-- Toast -->
+    <div class="busy-toast" id="busy_toast">⚠️ リモコンモード中 — ボタン4で切替！</div>
+
+    <script>
+        let _busyTimer = null;
+        function showBusy() {
+            let toast = document.getElementById('busy_toast');
+            toast.style.display = 'block';
+            clearTimeout(_busyTimer);
+            _busyTimer = setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        function handleBusy(res, onOk) {
+            res.json().then(d => {
+                if (d.status === 'busy' || d.status === 'locked') { showBusy(); }
+                else if (onOk) onOk(d);
+            });
+        }
+
+        function quayServo() {
+            let goc = document.getElementById('goc_input').value;
+            document.getElementById('trang_thai_servo').innerText = "回転中... (Đang quay...)";
+            fetch('/api/servo?goc=' + goc).then(r => handleBusy(r, d => {
+                document.getElementById('trang_thai_servo').innerText = d.message;
+                setTimeout(() => document.getElementById('trang_thai_servo').innerText = "", 2000);
+            }));
+        }
+
+        function capNhatLed() {
+            let r = document.getElementById('r_input').value;
+            let g = document.getElementById('g_input').value;
+            let b = document.getElementById('b_input').value;
+            document.getElementById('r_val').innerText = r;
+            document.getElementById('g_val').innerText = g;
+            document.getElementById('b_val').innerText = b;
+            document.getElementById('mau_preview').style.backgroundColor = `rgb(${r},${g},${b})`;
+            
+            fetch(`/api/led?r=${r}&g=${g}&b=${b}`).then(r => handleBusy(r, d => {
+                document.getElementById('led_status').innerText = '';
+            }));
+        }
+
+        function capNhatBlink() {
+            let is_blink = document.getElementById('blink_toggle').checked;
+            let speed = document.getElementById('blink_speed').value;
+            document.getElementById('speed_val').innerText = speed + "s";
+            
+            fetch(`/api/blink?state=${is_blink}&speed=${speed}`).then(r => handleBusy(r));
+        }
+
+        function guiLCD() {
+            let text = document.getElementById('custom_text').value;
+            if(!text) return;
+            fetch('/api/lcd?text=' + encodeURIComponent(text)).then(r => handleBusy(r, d => {
+                document.getElementById('custom_text').value = '';
+            }));
+        }
+
+        function quetCamBien() {
+            fetch('/api/status').then(r => r.json()).then(data => {
+                document.getElementById('t_temp').innerText = data.temp || "--";
+                document.getElementById('t_hum').innerText = data.hum || "--";
+                document.getElementById('t_press').innerText = data.press || "--";
+                document.getElementById('t_light').innerText = data.light || "--";
+
+                let tiltEl = document.getElementById('t_tilt');
+                if (data.tilt === "BI DO!") {
+                    tiltEl.className = "data-val color-alert";
+                    tiltEl.innerText = "⚠️ 転倒！";
+                } else {
+                    tiltEl.className = "data-val color-safe";
+                    tiltEl.innerText = "✅ 安全";
+                }
+
+                let pirEl = document.getElementById('t_pir');
+                if (data.pir === "Co nguoi!") {
+                    pirEl.className = "data-val color-temp";
+                    pirEl.innerText = " 検知あり"; 
+                } else {
+                    pirEl.className = "data-val color-safe";
+                    pirEl.innerText = "静止";
+                }
+
+                let l1 = data.lcd_line1 || "";
+                let l2 = data.lcd_line2 || "";
+                document.getElementById('lcd1').innerHTML = l1.replace(/ /g, '&nbsp;');
+                document.getElementById('lcd2').innerHTML = l2.replace(/ /g, '&nbsp;');
+            }).catch(e => console.log("Fetch error:", e));
+        }
+        
+        function quetMode() {
+            fetch('/api/control_mode').then(r => r.json()).then(data => {
+                let badge = document.getElementById('mode_badge');
+                if (data.remote_control_mode) {
+                    badge.className = 'mode-badge mode-remote';
+                    badge.innerText = '🔴 リモコンモード — Web制御不可';
+                } else {
+                    badge.className = 'mode-badge mode-web';
+                    badge.innerText = '🟢 Webモード — リモコンロック中';
+                }
+            }).catch(() => {});
+        }
+
+        setInterval(quetCamBien, 1000);
+        setInterval(quetMode, 2000);
+        quetCamBien();
+        quetMode();
+    </script>
+</body>
+</html>
