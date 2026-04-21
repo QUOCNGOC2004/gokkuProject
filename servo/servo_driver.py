@@ -5,15 +5,15 @@ from gpiozero import Servo
 import config
 
 # --- Cấu hình pulse width cho servo SG90 / MG996R ---
-_MIN_PULSE = 0.5 / 1000   # 0.5ms
-_MAX_PULSE = 2.5 / 1000   # 2.5ms
+_MIN_PULSE = 0.5 / 1000  # 0.5ms
+_MAX_PULSE = 2.5 / 1000  # 2.5ms
 
 # --- Khởi tạo phần cứng servo ---
 _servo: Servo | None = None
 try:
     _servo = Servo(
         config.SERVO_PIN,
-        initial_value=None,       # Không giật khi khởi động
+        initial_value=None,  # Không giật khi khởi động
         min_pulse_width=_MIN_PULSE,
         max_pulse_width=_MAX_PULSE,
     )
@@ -22,7 +22,7 @@ except Exception as e:
     print(f"[HW] Servo lỗi khởi tạo: {e}")
 
 # --- Trạng thái nội bộ ---
-_current_angle: int = 0           # Góc hiện tại (0–180)
+_current_angle: int = 0  # Góc hiện tại (0–180)
 _servo_lock = threading.Lock()
 
 
@@ -53,7 +53,7 @@ def move_to(target_angle: int) -> None:
         step = 1 if start < end else -1
         for angle in range(start, end + step, step):
             _servo.value = angle_to_value(angle)
-            time.sleep(0.005)   # ~5ms mỗi bước → mượt, không giật cơ
+            # time.sleep(0.005)
 
         # Detach khi đến đích để ngăn rung/giật khi đứng im
         _servo.value = None
