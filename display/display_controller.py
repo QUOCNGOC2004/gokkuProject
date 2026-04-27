@@ -40,7 +40,7 @@ def _display_loop() -> None:
     _is_displaying = False
 
 
-def trigger_sensor_display() -> None:
+def trigger_sensor_display() -> threading.Thread | None:
     """
     Kích hoạt hiển thị dữ liệu cảm biến trên LCD.
     Khởi động một thread daemon độc lập chạy _display_loop.
@@ -50,9 +50,10 @@ def trigger_sensor_display() -> None:
 
     if _is_displaying:
         print("[!] LCD đang xử lý hiển thị, bỏ qua lệnh nhận.")
-        return
+        return None
 
     _is_displaying = True
     print("[+] Bắt đầu tạo luồng cập nhật LCD...")
     _display_thread = threading.Thread(target=_display_loop, daemon=True)
     _display_thread.start()
+    return _display_thread

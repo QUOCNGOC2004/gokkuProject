@@ -64,7 +64,7 @@ def scroll_text(text: str, total_duration: float) -> None:
     clear()
 
 
-def scroll_in_thread(text: str, total_duration: float | None = None) -> None:
+def scroll_in_thread(text: str, total_duration: float | None = None) -> threading.Thread:
     """
     Wrapper non-blocking: chạy scroll_text trong daemon thread riêng.
     Nếu total_duration=None thì tự tính dựa theo độ dài văn bản.
@@ -72,8 +72,10 @@ def scroll_in_thread(text: str, total_duration: float | None = None) -> None:
     if total_duration is None:
         total_duration = max(5.0, (len(text) / 32.0) * 5.0) + 4.0
 
-    threading.Thread(
+    t = threading.Thread(
         target=scroll_text,
         args=(text, total_duration),
         daemon=True,
-    ).start()
+    )
+    t.start()
+    return t

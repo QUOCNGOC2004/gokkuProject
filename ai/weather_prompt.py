@@ -58,10 +58,14 @@ def _weather_task() -> None:
 
     if response:
         print(f"[AI] Nhan duoc {len(response)} ky tu, bat dau cuon LCD...")
-        scroll_in_thread(response)
+        t = scroll_in_thread(response)
+        if t:
+            t.join()
     else:
         print("[AI] Fallback: hien du lieu cam bien tho.")
-        trigger_sensor_display()
+        t = trigger_sensor_display()
+        if t:
+            t.join()
 
     _ai_running = False
 
